@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow
+
+name: Linux x86 Build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debian
+            container: debian:bookworm
+            setup_cmd: |
+              apt-get update
+              apt-get install -y --no-install-recommends bash ca-certificates git
+              cat >/usr/local/bin/sudo <<'SUDO'
+              #!/bin/sh
+              exec "$@"
+              SUDO
+              chmod +x /usr/local/bin/sudo
+              tools/debian_buildenv.sh setup < /dev/null
+          - name: Arch
+            container: archlinux:latest
+            setup_cmd: |
+              pacman -Syu --noconfirm --needed bash ca-certificates git
+              cat >/usr/local/bin/yay <<'YAY'
+              #!/bin/sh
+              exec pacman "$@" --noconfirm
+              YAY
+              chmod +x /usr/local/bin/yay
+              tools/arch_buildenv.sh setup
+    container:
+      image: ${{ matrix.container }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: ${{ matrix.setup_cmd }}
+
+      - name: Configure
+        run: >-
+          cmake
+          -S .
+          -B build
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DBUILD_TESTING=OFF
+
+      - name: Build
+        run: cmake --build . --config RelWithDebInfo --parallel
+        working-directory: build
