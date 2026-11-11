@@ -64,6 +64,7 @@ jobs:
           -B build
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
           -DBUILD_TESTING=OFF
+          -DBUILD_BENCH=OFF
 
       - name: Build
         run: cmake --build . --config RelWithDebInfo --parallel
