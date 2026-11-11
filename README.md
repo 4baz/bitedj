@@ -84,6 +84,52 @@ The sections below describe the fork as a whole. In brief, by release:
 - The Debian package depends on `fonts-noto-cjk`.
 - Fixed all `-Werror` warnings.
 
+### Building on Linux
+
+On Debian, Ubuntu, and derivatives, install the supported development
+dependencies with:
+
+```sh
+tools/debian_buildenv.sh setup
+```
+
+Configure and build a normal local build with:
+
+```sh
+cmake -S . -B build \
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+  -DBUILD_TESTING=OFF
+cmake --build build --config RelWithDebInfo --parallel
+```
+
+The executable is written to `build/mixxx`. On memory-constrained systems,
+avoid the unrestricted parallel build because each C++ compiler process can use
+significant memory. Reuse the same build directory and compile one translation
+unit at a time:
+
+```sh
+cmake --build build --config RelWithDebInfo --parallel 1
+```
+
+This project does not provide a switch to disable Linux or runtime
+out-of-memory termination; reducing build parallelism is the supported way to
+lower peak memory usage.
+
+### Pioneer DDJ-ERGO controller
+
+The DDJ-ERGO mapping is shipped in `res/controllers/DDJ_ERGO.midi.xml` with
+its JavaScript implementation in `res/controllers/DDJ_ERGO.js`. After building
+or installing BiteDJ:
+
+1. Connect the DDJ-ERGO and make sure its MIDI device is visible to Linux.
+2. Open Preferences and select the DDJ-ERGO MIDI device.
+3. Choose `DDJ ERGO` as its mapping and enable the controller.
+
+If the device is not listed, verify that no other application has claimed its
+MIDI ports and check the system MIDI device list. The mapping is loaded from
+the installed `controllers` data directory; it is not compiled into the
+executable.
+
 ## Real-time & performance
 
 - Native CPU pinning and `rtprio` support (`src/util/rtscheduling`); the main thread
